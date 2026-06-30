@@ -1,0 +1,29 @@
+import { cn } from "@/lib/utils";
+
+export function StatusPill({ status }: { status?: number }) {
+  if (status === undefined) {
+    return (
+      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        —
+      </span>
+    );
+  }
+  const tone =
+    status >= 500
+      ? "bg-destructive/15 text-destructive border-destructive/30"
+      : status >= 400
+        ? "bg-destructive/10 text-destructive border-destructive/20"
+        : status >= 300
+          ? "bg-warning/15 text-warning border-warning/30"
+          : "bg-success/15 text-success border-success/30";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs font-medium",
+        tone,
+      )}
+    >
+      {status}
+    </span>
+  );
+}
