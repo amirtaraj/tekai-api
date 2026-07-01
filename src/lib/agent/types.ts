@@ -61,8 +61,29 @@ export interface HistoryEntry {
   response?: ApiResponse;
 }
 
+export interface CollectionEntry {
+  id: string;
+  request: ApiRequest;
+  response?: ApiResponse;
+  createdAt: number;
+  source: "manual" | "agent" | "test";
+  expectedStatus?: number;
+  assertions?: string[];
+  testCaseName?: string;
+}
+
+export interface TestCase {
+  id: string;
+  name: string;
+  request: ApiRequest;
+  response?: ApiResponse;
+  expectedStatus?: number;
+  assertions: string[];
+  createdAt: number;
+}
+
 export interface SavedCollection {
   id: string;
   name: string;
-  requests: ApiRequest[];
+  requests: CollectionEntry[];
 }

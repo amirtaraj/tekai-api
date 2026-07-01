@@ -15,15 +15,31 @@ import { useWorkspace } from "@/lib/agent/workspaceStore";
 import type { HttpMethod } from "@/lib/agent/types";
 import { ResponseViewer } from "./ResponseViewer";
 
+function parseQueryParams(url: string): { key: string; value: string }[] {
+  try {
+    const parsed = new URL(url, "https://example.com");
+    return Array.from(parsed.searchParams.entries()).map(([key, value]) => ({ key, value }));
+  } catch {
+    return [];
+  }
+}
+
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
 export function ApiRunner() {
-  const { request, setRequest, send, sending, response, saveCurrent } = useWorkspace();
+  const { request, setRequest, send, sending, response, saveCurrent, createTestCaseFromResponse } = useWorkspace();
   const [collectionName] = useState("Demo Suite");
 
   const headersText = Object.entries(request.headers ?? {})
     .map(([k, v]) => `${k}: ${v}`)
     .join("\n");
+  const queryParams = parseQueryParams(request.url);
+  const requestSummary = {
+    method: request.method,
+    url: request.url,
+    queryParams,
+    body: request.body ?? "",
+  };
 
   const setHeadersText = (text: string) => {
     const headers: Record<string, string> = {};
@@ -70,10 +86,55 @@ export function ApiRunner() {
         >
           <Save className="h-3.5 w-3.5" />
         </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            const name = window.prompt("Name this test case", `${request.method} ${request.url}`);
+            createTestCaseFromResponse(name ?? undefined);
+          }}
+          disabled={!response}
+        >
+          Create Test Case
+        </Button>
       </div>
 
       <div className="grid flex-1 grid-cols-2 overflow-hidden">
         <div className="flex flex-col border-r border-border">
+          <div className="border-b border-border px-3 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Request details
+            </div>
+            <div className="mt-2 space-y-2 rounded-md bg-muted/40 p-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">URI:</span>{" "}
+                <span className="break-all font-mono text-foreground/90">{requestSummary.url}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Type:</span>{" "}
+                <span className="font-mono font-semibold text-primary">{requestSummary.method}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Query params:</span>
+                {queryParams.length === 0 ? (
+                  <span className="ml-1 text-muted-foreground">none</span>
+                ) : (
+                  <ul className="mt-1 space-y-1">
+                    {queryParams.map((p) => (
+                      <li key={`${p.key}-${p.value}`} className="font-mono text-[11px] text-foreground/80">
+                        {p.key} = {p.value}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Body:</span>
+                <pre className="mt-1 max-h-32 overflow-auto rounded bg-background/70 p-2 font-mono text-[11px] leading-relaxed text-foreground/80">
+                  {requestSummary.body || "(empty)"}
+                </pre>
+              </div>
+            </div>
+          </div>
           <Tabs defaultValue="body" className="flex h-full flex-col">
             <TabsList className="mx-3 mt-3 self-start">
               <TabsTrigger value="body">Body</TabsTrigger>

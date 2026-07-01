@@ -58,10 +58,12 @@ function Index() {
           <div className="flex flex-1 overflow-hidden">
             <Sidebar />
             <main className="flex flex-1 overflow-hidden">
-              <div className="flex-1 overflow-hidden">
-                <ApiRunner />
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <AgentPanel />
+                <div className="h-[34%] min-h-[280px] border-t border-border bg-card/20">
+                  <ApiRunner />
+                </div>
               </div>
-              <AgentPanel />
             </main>
           </div>
         ) : (

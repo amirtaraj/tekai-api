@@ -25,24 +25,31 @@ export function AgentPanel() {
   };
 
   return (
-    <div className="flex h-full w-[420px] shrink-0 flex-col border-l border-border bg-card/40">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <div className="grid h-7 w-7 place-items-center rounded-md bg-primary/15 text-primary">
-          <Sparkles className="h-4 w-4" />
+    <div className="flex h-full flex-1 flex-col border-b border-border bg-card/40">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="grid h-7 w-7 place-items-center rounded-md bg-primary/15 text-primary">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold tracking-tight">Agent Execution Center</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Every thought, action, assertion, and edit is shown here
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-tight">Agent Assistant</span>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Natural language → API plan
-          </span>
-        </div>
+        {currentRun && (
+          <div className="rounded-full border border-border bg-background/70 px-2.5 py-1 text-[10px] text-muted-foreground">
+            {currentRun.steps.length} steps
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
         {!currentRun && (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Describe what you want to test. The agent will plan, execute, and assert.
+              Describe what you want to test. The agent will plan, execute, and assert while streaming every step into this view.
             </p>
             <div className="space-y-1.5">
               {SUGGESTIONS.map((s) => (

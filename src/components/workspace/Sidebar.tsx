@@ -4,7 +4,7 @@ import { StatusPill } from "./StatusPill";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
-  const { history, collections, loadHistoryEntry, agentRuns, selectRun, currentRun } =
+  const { history, collections, testCases, loadHistoryEntry, agentRuns, selectRun, currentRun } =
     useWorkspace();
 
   return (
@@ -28,21 +28,50 @@ export function Sidebar() {
               <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
                 {c.name}
               </div>
-              {c.requests.map((r, i) => (
+              {c.requests.map((entry, i) => (
                 <button
-                  key={i}
+                  key={entry.id}
                   onClick={() => loadHistoryEntry(`${c.id}:${i}`)}
-                  className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent"
+                  className="group flex w-full flex-col items-start gap-1 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent"
                 >
-                  <span className="font-mono text-[10px] font-semibold text-primary">
-                    {r.method}
-                  </span>
-                  <span className="truncate text-foreground/80 group-hover:text-foreground">
-                    {r.url}
-                  </span>
+                  <div className="flex w-full items-center gap-2">
+                    <span className="font-mono text-[10px] font-semibold text-primary">
+                      {entry.request.method}
+                    </span>
+                    <span className="flex-1 truncate text-foreground/80 group-hover:text-foreground">
+                      {entry.request.url}
+                    </span>
+                  </div>
+                  {entry.response ? (
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span className="font-medium text-foreground/80">{entry.response.status}</span>
+                      <span>{entry.response.durationMs}ms</span>
+                      {entry.response.ok ? <span className="text-success">ok</span> : null}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">saved request</span>
+                  )}
                 </button>
               ))}
             </div>
+          ))}
+        </Section>
+
+        <Section icon={<Sparkles className="h-3.5 w-3.5" />} label="Test Cases">
+          {testCases.length === 0 && (
+            <p className="px-2 text-xs text-muted-foreground">Create a case from a response to reuse it.</p>
+          )}
+          {testCases.map((testCase) => (
+            <button
+              key={testCase.id}
+              onClick={() => loadHistoryEntry(testCase.id)}
+              className="flex w-full flex-col items-start gap-1 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent"
+            >
+              <span className="font-medium text-foreground/90">{testCase.name}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {testCase.request.method} {testCase.request.url} · {testCase.assertions.length} checks
+              </span>
+            </button>
           ))}
         </Section>
 

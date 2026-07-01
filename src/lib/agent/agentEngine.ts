@@ -28,6 +28,8 @@ export interface RunOptions {
   getCurrentRequest?: () => ApiRequest;
   /** Mutates the request in the manual workspace (used by `edit` steps). */
   setCurrentRequest?: (r: ApiRequest) => void;
+  /** Called whenever an action step completes with a live response. */
+  onActionComplete?: (step: AgentStep) => void;
 }
 
 export async function runAgent(prompt: string, opts: RunOptions): Promise<AgentRun> {
@@ -67,6 +69,7 @@ export async function runAgent(prompt: string, opts: RunOptions): Promise<AgentR
         step.request = req;
         const res = await executeRequest(req);
         step.response = res;
+        opts.onActionComplete?.(step);
         // capture token if present
         if (res.ok && isObj(res.body) && typeof res.body.token === "string") {
           ctx.token = res.body.token;
@@ -144,7 +147,7 @@ function planFromPrompt(prompt: string, current?: ApiRequest): StepDraft[] {
         method: "POST",
         url: "/auth/login",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: "ada@example.com", password: "demo" }, null, 2),
+        body: JSON.stringify({ username: "emilys", password: "emilyspass" }, null, 2),
       },
     });
     steps.push({
@@ -489,7 +492,8 @@ function evalAssertion(label: string, res: AgentRun["steps"][0]["response"] | un
     return { pass: isObj(res.body) && "id" in (res.body as object), detail: "id present" };
   }
   if (t.includes("contains 'updated_at'")) {
-    return { pass: isObj(res.body) && "updated_at" in (res.body as object), detail: "updated_at present" };
+    const hasUpdatedField = isObj(res.body) && ("updated_at" in (res.body as object) || "updatedAt" in (res.body as object));
+    return { pass: hasUpdatedField, detail: hasUpdatedField ? "updated timestamp present" : "missing updated timestamp" };
   }
   if (t.includes("order.total is a number")) {
     return {
