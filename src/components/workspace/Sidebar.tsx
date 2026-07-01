@@ -126,7 +126,7 @@ export function Sidebar() {
       </div>
 
       <div className="border-t border-border px-4 py-2 text-[10px] text-muted-foreground">
-        Mock backend · /lib/agent
+        Python backend · /python_backend
       </div>
     </aside>
   );

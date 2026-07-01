@@ -1,71 +1,37 @@
 const DOCS = `# Agentic AI · API Testing Tool
 
-A scalable boilerplate for building an LLM-driven API testing experience.
+A lightweight workspace for planning, executing, and validating API requests through a Python-backed agent.
 
-## How the demo works
+## How the app works
 
-1. **Manual API Runner** — pick a method, type a path, and hit **Send**. The request is routed through \`apiExecutor.ts\` to a mock in-memory backend (no network required).
-2. **Agent Assistant** — type natural language. The mock agent plans a sequence of \`Thought → Action → Observation → Assertion\` steps, streamed live into the timeline.
-3. **History & Collections** — every send is logged. Save the current request into a collection with the disk icon.
-
-## Available mock endpoints
-
-- \`POST /auth/login\` — returns a fake JWT
-- \`GET|POST|PUT|PATCH|DELETE /users[/:id]\` — full CRUD
-- \`GET|POST|PUT|PATCH|DELETE /products[/:id]\` — full CRUD
-- \`GET|POST|DELETE /orders[/:id]\` — requires \`Authorization: Bearer …\`
-- \`GET|POST|PUT|PATCH|DELETE /posts[/:id]\` — full CRUD
-- \`GET /admin/*\` — requires header \`x-api-key: demo-api-key\`
-- \`GET /health\`
-
-## What the agent can do
-
-The mock agent understands four broad intents:
-
-1. **CRUD prompts** — "Create a new product named 'Mouse' with price 29.99", "Update user 1's email to x@y.com", "Delete post 55", "Fetch user 2".
-2. **Edit-the-loaded-request prompts** — if a request is loaded in the manual runner, the agent will *modify it in place*:
-    - "Add a Bearer token 'abc123' to the auth header"
-    - "Add a query parameter named version with value v2"
-    - "Change the method to PUT" / "Set email to test@example.com"
-3. **Auth bootstrapping** — anything touching \`/orders\` automatically gets a \`POST /auth/login\` step first; the bearer token flows into the next call via \`{{token}}\`.
-4. **Assertions** — every action produces a checklist: status code, response time, body shape, JSON Schema-style field presence.
-
-## Interactive timeline
-
-- Click any agent step that has a request to **load that request and its response into the manual workspace**.
-- Use the **Apply** button next to an action to copy its request into the runner for further editing.
-- Edit steps show a diff of which fields were changed in the workspace request.
+1. **Manual API Runner** — choose a method, enter a path, and send the request from the main workspace.
+2. **Agent Assistant** — describe the task in natural language and the agent will plan the steps, run them, and surface the results in the timeline.
+3. **Collections and Tests** — every request and response can be saved, and successful responses can be turned into reusable test cases.
 
 ## Architecture
 
 \`\`\`
 src/
+├─ components/workspace/   # UI panels and request runner
 ├─ lib/agent/
-│   ├─ types.ts          # shared TS types
-│   ├─ apiExecutor.ts    # single fetch entry  ← swap for real fetch
-│   ├─ mockBackend.ts    # in-memory endpoints ← delete when going live
-│   ├─ agentEngine.ts    # mock planner + loop ← swap for real LLM
-│   └─ workspaceStore   # React context state
-└─ components/workspace/ # UI only — no business logic
+│   ├─ agentEngine.ts      # frontend orchestration for the agent loop
+│   ├─ apiExecutor.ts      # forwards requests to the Python backend
+│   └─ workspaceStore.tsx  # shared state for requests, history, collections, and tests
+└─ python_backend/         # Python service for planning and request execution
 \`\`\`
 
-UI and engine are fully decoupled — components only read/write through \`useWorkspace()\`.
+The React frontend stays in TypeScript/JavaScript, while the planning and execution runtime lives in Python.
 
-## Wire in a real LLM
+## Running locally
 
-Open \`src/lib/agent/agentEngine.ts\` and replace \`planFromPrompt\` with a call to your provider (OpenAI, Anthropic, or the Lovable AI Gateway). Return a list of \`AgentStep\` drafts; the streaming loop and context propagation (auth tokens, etc.) keep working unchanged.
+- Start the Python service: \`npm run python:agent\`
+- Start the frontend: \`npm run dev\`
 
-## Wire in a real backend
+## Extending the experience
 
-Open \`src/lib/agent/apiExecutor.ts\`. A reference \`realFetch\` implementation is already there — change \`executeRequest\` to call it instead of \`mockFetch\`.
-
-## Add a new mock endpoint
-
-Edit \`src/lib/agent/mockBackend.ts\`, add a branch in the \`mockFetch\` router, and (optionally) list it in \`MOCK_ENDPOINTS\`.
-
-## Add a new UI panel
-
-Drop a component into \`src/components/workspace/\` and slot it into \`src/routes/index.tsx\`. No global wiring required.
+- Add more agent behavior in \`python_backend/agent_service.py\`
+- Adjust the frontend flow in \`src/lib/agent/agentEngine.ts\`
+- Create new workspace panels inside \`src/components/workspace/\`
 `;
 
 export function DocsPanel() {

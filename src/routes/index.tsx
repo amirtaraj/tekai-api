@@ -51,7 +51,7 @@ function Index() {
           </div>
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" />
-            mock backend online
+            Python backend online
           </div>
         </header>
         {tab === "workspace" ? (

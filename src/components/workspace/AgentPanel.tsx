@@ -93,7 +93,7 @@ export function AgentPanel() {
           </Button>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
-          Mock LLM · swap in OpenAI/Anthropic in <span className="font-mono">agentEngine.ts</span>
+          Python-backed agent · planning and execution run through the local service
         </p>
       </div>
     </div>

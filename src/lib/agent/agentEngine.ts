@@ -21,6 +21,8 @@ type StepDraft = Omit<AgentStep, "id" | "status">;
 
 let counter = 0;
 const uid = (p: string) => `${p}_${Date.now().toString(36)}_${(counter++).toString(36)}`;
+const DEFAULT_PYTHON_AGENT_URL = "http://127.0.0.1:8765";
+const PYTHON_AGENT_URL = (import.meta.env?.VITE_PYTHON_AGENT_URL ?? DEFAULT_PYTHON_AGENT_URL) as string;
 
 export interface RunOptions {
   onStep: (run: AgentRun) => void;
@@ -41,7 +43,7 @@ export async function runAgent(prompt: string, opts: RunOptions): Promise<AgentR
     status: "running",
   };
 
-  const plan = planFromPrompt(prompt, opts.getCurrentRequest?.());
+  const plan = await planFromPrompt(prompt, opts.getCurrentRequest?.());
 
   // Context bag passed between steps (e.g. auth token).
   const ctx: Record<string, unknown> = {};
@@ -116,7 +118,34 @@ export async function runAgent(prompt: string, opts: RunOptions): Promise<AgentR
 
 /* ---------- planning ---------- */
 
-function planFromPrompt(prompt: string, current?: ApiRequest): StepDraft[] {
+async function planFromPrompt(prompt: string, current?: ApiRequest): Promise<StepDraft[]> {
+  try {
+    const response = await fetch(`${PYTHON_AGENT_URL}/agent/plan`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as { plan?: Array<Record<string, unknown>> };
+      if (Array.isArray(payload.plan) && payload.plan.length > 0) {
+        return payload.plan.map((step) => ({
+          ...step,
+          kind: step.kind as AgentStep["kind"],
+          request: step.request as ApiRequest | undefined,
+          assertions: Array.isArray(step.assertions)
+            ? step.assertions.map((assertion) => ({
+                ...(assertion as AssertionResult),
+                status: (assertion as AssertionResult).status as AssertionResult["status"],
+              }))
+            : undefined,
+        })) as StepDraft[];
+      }
+    }
+  } catch (error) {
+    console.warn("Python plan service unavailable, falling back to local planner:", error);
+  }
+
   const p = prompt.toLowerCase();
   const steps: StepDraft[] = [];
 
