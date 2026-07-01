@@ -10,25 +10,23 @@ API_BASE_URL = os.getenv("VITE_AGENT_API_BASE_URL", DEFAULT_API_BASE_URL)
 
 
 def execute_request(req: Dict[str, Any]) -> Dict[str, Any]:
-    method = req.get("method", "GET")
-    url = req.get("url", "")
+    method = str(req.get("method", "GET")).upper()
+    url = str(req.get("url", "")).strip()
     headers = dict(req.get("headers") or {})
     body = req.get("body")
 
     if method not in {"GET", "DELETE"} and "content-type" not in {k.lower() for k in headers}:
         headers["content-type"] = "application/json"
 
-    if not url.startswith(("http://", "https://")):
-        path = url if url.startswith("/") else f"/{url}"
-        path = map_path(path)
-        target_url = f"{API_BASE_URL.rstrip('/')}{path}"
-    else:
-        target_url = url
+    target_url = resolve_url(url)
+    request_data = None
+    if method not in {"GET", "DELETE"} and isinstance(body, str) and body:
+        request_data = body.encode("utf-8")
 
-    request = urllib.request.Request(target_url, data=None if method in {"GET", "DELETE"} else body.encode("utf-8") if isinstance(body, str) else None, headers=headers, method=method)
+    request = urllib.request.Request(target_url, data=request_data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
-            text = response.read().decode("utf-8")
+            text = response.read().decode("utf-8", errors="replace")
             try:
                 json_body = json.loads(text)
             except Exception:
@@ -36,7 +34,7 @@ def execute_request(req: Dict[str, Any]) -> Dict[str, Any]:
             headers_out = {k: v for k, v in response.headers.items()}
             return {
                 "status": response.status,
-                "statusText": response.reason,
+                "statusText": response.reason or "OK",
                 "durationMs": 0,
                 "headers": headers_out,
                 "body": json_body,
@@ -51,12 +49,37 @@ def execute_request(req: Dict[str, Any]) -> Dict[str, Any]:
         headers_out = {k: v for k, v in exc.headers.items()}
         return {
             "status": exc.code,
-            "statusText": exc.reason,
+            "statusText": exc.reason or "Request failed",
             "durationMs": 0,
             "headers": headers_out,
-            "body": json_body,
+            "body": {
+                "error": "Request failed",
+                "message": str(json_body) if json_body else "The upstream service returned an error.",
+            },
             "ok": False,
         }
+    except Exception as exc:
+        return {
+            "status": 502,
+            "statusText": "Bad Gateway",
+            "durationMs": 0,
+            "headers": {},
+            "body": {
+                "error": "Request failed",
+                "message": "The backend could not reach the target service. Please verify the URL and try again.",
+            },
+            "ok": False,
+        }
+
+
+def resolve_url(url: str) -> str:
+    if not url:
+        return f"{API_BASE_URL.rstrip('/')}/health"
+    if url.startswith(("http://", "https://")):
+        return url
+    path = url if url.startswith("/") else f"/{url}"
+    path = map_path(path)
+    return f"{API_BASE_URL.rstrip('/')}{path}"
 
 
 def map_path(path: str) -> str:
@@ -117,10 +140,26 @@ def plan_from_prompt(prompt: str) -> List[Dict[str, Any]]:
 
 def detect_intent(prompt: str) -> Dict[str, Any]:
     p = prompt.lower()
+    import re
+
+    explicit_url = extract_url(prompt)
+    explicit_method_match = re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\b", prompt, re.I)
+    explicit_method = explicit_method_match.group(1).upper() if explicit_method_match else None
+
+    if explicit_url and explicit_method:
+        return {
+            "method": explicit_method,
+            "url": explicit_url,
+            "headers": {},
+            "body": None,
+            "needsAuth": False,
+            "reason": f"Call {explicit_method} {explicit_url}.",
+            "actionDetail": f"Target URL: {explicit_url}",
+            "assertions": ["Status code is 200", "Response time < 2000ms"],
+        }
+
     resource = "products" if "product" in p else "orders" if "order" in p else "posts" if "post" in p else "users" if "user" in p else "health"
     needs_auth = resource == "orders" or any(k in p for k in ["auth", "login", "token"])
-    id_match = None
-    import re
     id_match = re.search(r"id\s*[:#=]?\s*[\"']?([\w\-]+)[\"']?|\b(\d{2,})\b|\b(p_\d+|o_\d+)\b", prompt, re.I)
     id_value = id_match.group(1) if id_match and id_match.group(1) else (id_match.group(2) if id_match and id_match.group(2) else (id_match.group(3) if id_match and id_match.group(3) else None))
 
@@ -134,7 +173,7 @@ def detect_intent(prompt: str) -> Dict[str, Any]:
             "needsAuth": needs_auth,
             "reason": f"Create a new {singular(resource)} with the extracted fields.",
             "actionDetail": f"Body: {json.dumps(body)}",
-            "assertions": ["Status code is 201", "Response body contains an 'id'", "Response time < 500ms"],
+            "assertions": ["Status code is 201", "Response body contains an 'id'", "Response time < 2000ms"],
         }
 
     if re.search(r"\b(update|patch|modify|change|edit)\b", p) and resource != "health":
@@ -148,7 +187,7 @@ def detect_intent(prompt: str) -> Dict[str, Any]:
             "needsAuth": needs_auth,
             "reason": f"Update {singular(resource)} {id_value or '1'}.",
             "actionDetail": f"Body: {json.dumps(body)}",
-            "assertions": ["Status code is 200", "Response body contains 'updated_at'", "Response time < 500ms"],
+            "assertions": ["Status code is 200", "Response body contains 'updated_at'", "Response time < 2000ms"],
         }
 
     if re.search(r"\b(delete|remove|destroy)\b", p) and resource != "health":
@@ -158,7 +197,7 @@ def detect_intent(prompt: str) -> Dict[str, Any]:
             "headers": {"authorization": "Bearer {{token}}"} if needs_auth else {},
             "needsAuth": needs_auth,
             "reason": f"Delete {singular(resource)} {id_value or '1'}.",
-            "assertions": ["Status code is 204", "Response time < 500ms"],
+            "assertions": ["Status code is 204", "Response time < 2000ms"],
         }
 
     if id_value and resource != "health":
@@ -168,7 +207,7 @@ def detect_intent(prompt: str) -> Dict[str, Any]:
             "headers": {"authorization": "Bearer {{token}}"} if needs_auth else {},
             "needsAuth": needs_auth,
             "reason": f"Fetch {singular(resource)} {id_value}.",
-            "assertions": ["Status code is 200", "Response is a JSON object", "Response time < 500ms"],
+            "assertions": ["Status code is 200", "Response is a JSON object", "Response time < 2000ms"],
         }
 
     return {
@@ -178,9 +217,15 @@ def detect_intent(prompt: str) -> Dict[str, Any]:
         "needsAuth": needs_auth,
         "reason": f"List {resource}.",
         "actionDetail": f"List {resource}",
-        "assertions": ["Status code is 200", "Response is a JSON array or object", "Response time < 500ms"],
+        "assertions": ["Status code is 200", "Response is a JSON array or object", "Response time < 2000ms"],
         "body": None,
     }
+
+
+def extract_url(prompt: str) -> str | None:
+    import re
+    match = re.search(r"https?://[^\s\"']+", prompt)
+    return match.group(0).rstrip(".,;:") if match else None
 
 
 def extract_body_fields(prompt: str) -> Dict[str, Any]:

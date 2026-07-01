@@ -5,14 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/lib/agent/workspaceStore";
 import { AgentTimeline } from "./AgentTimeline";
 
-const SUGGESTIONS = [
-  "Create a new product named 'Wireless Mouse' with price 29.99 and assert the response contains an id",
-  "Update user 1's email to test@example.com and verify the updated_at field is present",
-  "Delete the post with id 55",
-  "Add a Bearer token 'my-secret-token' to the auth header",
-  "Add a query parameter named version with value v2 and change the method to PUT",
-];
-
 export function AgentPanel() {
   const { runPrompt, runningAgent, currentRun } = useWorkspace();
   const [prompt, setPrompt] = useState("");
@@ -32,9 +24,9 @@ export function AgentPanel() {
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-tight">Agent Execution Center</span>
+            <span className="text-sm font-semibold tracking-tight">Python Agent Service</span>
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Every thought, action, assertion, and edit is shown here
+              Plan, execute, and assert API calls from one place
             </span>
           </div>
         </div>
@@ -49,19 +41,8 @@ export function AgentPanel() {
         {!currentRun && (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Describe what you want to test. The agent will plan, execute, and assert while streaming every step into this view.
+              Describe the service you want to test. The agent will plan the request, execute it, and add assertions from the response.
             </p>
-            <div className="space-y-1.5">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setPrompt(s)}
-                  className="block w-full rounded-md border border-border bg-background/40 px-3 py-2 text-left text-xs text-foreground/80 transition-colors hover:border-primary/40 hover:text-foreground"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -79,7 +60,7 @@ export function AgentPanel() {
                 submit();
               }
             }}
-            placeholder="Ask the agent to test something..."
+            placeholder="Create a product, update a user, or test a custom endpoint..."
             className="min-h-[72px] resize-none pr-12 text-sm"
             disabled={runningAgent}
           />
@@ -93,7 +74,7 @@ export function AgentPanel() {
           </Button>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
-          Python-backed agent · planning and execution run through the local service
+          Powered by python_backend/agent_service.py
         </p>
       </div>
     </div>

@@ -23,6 +23,7 @@ let counter = 0;
 const uid = (p: string) => `${p}_${Date.now().toString(36)}_${(counter++).toString(36)}`;
 const DEFAULT_PYTHON_AGENT_URL = "http://127.0.0.1:8765";
 const PYTHON_AGENT_URL = (import.meta.env?.VITE_PYTHON_AGENT_URL ?? DEFAULT_PYTHON_AGENT_URL) as string;
+const DEFAULT_RESPONSE_TIME_THRESHOLD_MS = 2000;
 
 export interface RunOptions {
   onStep: (run: AgentRun) => void;
@@ -368,7 +369,7 @@ function detectIntent(prompt: string): Intent {
       assertions: [
         "Status code is 201",
         "Response body contains an 'id'",
-        "Response time < 500ms",
+        `Response time < ${DEFAULT_RESPONSE_TIME_THRESHOLD_MS}ms`,
       ],
     };
   }
@@ -388,7 +389,7 @@ function detectIntent(prompt: string): Intent {
       assertions: [
         "Status code is 200",
         "Response body contains 'updated_at'",
-        "Response time < 500ms",
+        `Response time < ${DEFAULT_RESPONSE_TIME_THRESHOLD_MS}ms`,
       ],
     };
   }
@@ -401,7 +402,7 @@ function detectIntent(prompt: string): Intent {
       headers: needsAuth ? { authorization: "Bearer {{token}}" } : {},
       needsAuth,
       reason: `Delete ${singular(resource)} ${id ?? "1"}.`,
-      assertions: ["Status code is 204", "Response time < 500ms"],
+      assertions: ["Status code is 204", `Response time < ${DEFAULT_RESPONSE_TIME_THRESHOLD_MS}ms`],
     };
   }
 
@@ -416,7 +417,7 @@ function detectIntent(prompt: string): Intent {
       assertions: [
         "Status code is 200",
         "Response is a JSON object",
-        "Response time < 500ms",
+        `Response time < ${DEFAULT_RESPONSE_TIME_THRESHOLD_MS}ms`,
       ],
     };
   }
@@ -433,7 +434,7 @@ function detectIntent(prompt: string): Intent {
         "Status code is 200",
         "Response is a non-empty list",
         ...(resource === "orders" ? ["Each order.total is a number"] : []),
-        "Response time < 500ms",
+        `Response time < ${DEFAULT_RESPONSE_TIME_THRESHOLD_MS}ms`,
       ],
     };
   }
@@ -444,7 +445,7 @@ function detectIntent(prompt: string): Intent {
     url: "/health",
     needsAuth: false,
     reason: "Health check.",
-    assertions: ["Status code is 200", "Response time < 200ms"],
+    assertions: ["Status code is 200", `Response time < ${DEFAULT_RESPONSE_TIME_THRESHOLD_MS}ms`],
   };
 }
 

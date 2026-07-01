@@ -1,4 +1,4 @@
-import { Send, Save } from "lucide-react";
+import { Send, FolderPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,11 +80,14 @@ export function ApiRunner() {
         </Button>
         <Button
           variant="outline"
-          size="icon"
-          title="Save to collection"
-          onClick={() => saveCurrent(collectionName)}
+          title="Add a new collection"
+          onClick={() => {
+            const name = window.prompt("Collection name", collectionName);
+            if (name?.trim()) saveCurrent(name.trim());
+          }}
         >
-          <Save className="h-3.5 w-3.5" />
+          <FolderPlus className="mr-2 h-3.5 w-3.5" />
+          New Collection
         </Button>
         <Button
           variant="secondary"

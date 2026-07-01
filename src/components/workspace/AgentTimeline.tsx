@@ -90,7 +90,7 @@ function StepRow({ step }: { step: AgentStep }) {
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {KIND_LABEL[step.kind]}
           </span>
-          {step.response && <StatusPill status={step.response.status} />}
+          {step.response && <StatusPill status={step.response.status} durationMs={step.response.durationMs} />}
           {step.finishedAt && step.startedAt && (
             <span className="ml-auto text-[10px] text-muted-foreground">
               {step.finishedAt - step.startedAt}ms
@@ -130,6 +130,11 @@ function StepRow({ step }: { step: AgentStep }) {
               </li>
             ))}
           </ul>
+        )}
+        {step.status === "failed" && step.detail && (
+          <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
+            {step.detail}
+          </div>
         )}
         {step.assertions && step.assertions.length > 0 && (
           <ul className="mt-2 space-y-1">
